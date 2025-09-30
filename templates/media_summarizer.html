@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Media Summarizer - InfoByte{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-video"></i> Media Summarizer</h1>
+    <p>Summarize YouTube videos using AI-powered transcript analysis</p>
+</div>
+
+<div class="content-wrapper">
+    <div class="input-section">
+        <div class="card">
+            <h3><i class="fas fa-link"></i> YouTube Video</h3>
+            <input type="text" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." class="form-input">
+            <button id="youtubeBtn" class="btn-primary btn-large">
+                <i class="fas fa-play-circle"></i> Summarize YouTube Video
+            </button>
+            
+            <div class="divider">
+                <span>OR</span>
+            </div>
+            
+            <h3><i class="fas fa-file-upload"></i> Upload Text File</h3>
+            <div class="file-upload-area">
+                <input type="file" id="mediaFile" accept=".txt" hidden>
+                <label for="mediaFile" class="file-upload-label">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span>Upload Text File (.txt)</span>
+                </label>
+                <p id="mediaFileName" class="file-name"></p>
+            </div>
+            <button id="fileBtn" class="btn-secondary btn-large" style="display: none;">
+                <i class="fas fa-file-alt"></i> Summarize File
+            </button>
+        </div>
+    </div>
+
+    <div class="output-section">
+        <div class="card">
+            <h3><i class="fas fa-check-circle"></i> Summary Result</h3>
+            <div id="mediaLoader" class="loader" style="display: none;">
+                <div class="spinner"></div>
+                <p>Processing media content...</p>
+            </div>
+            <div id="mediaOutput" class="output-box">
+                <p class="placeholder-text">Your media summary will appear here...</p>
+            </div>
+            <button id="copyMedia" class="btn-secondary" style="display: none;">
+                <i class="fas fa-copy"></i> Copy Summary
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let mediaFileContent = null;
+
+document.getElementById('mediaFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        document.getElementById('mediaFileName').textContent = `Selected: ${file.name}`;
+        document.getElementById('fileBtn').style.display = 'inline-block';
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            mediaFileContent = e.target.result;
+        };
+        reader.readAsText(file);
+    }
+});
+
+document.getElementById('youtubeBtn').addEventListener('click', async function() {
+    const url = document.getElementById('youtubeUrl').value.trim();
+    
+    if (!url) {
+        showNotification('Please enter a YouTube URL', 'error');
+        return;
+    }
+    
+    const loader = document.getElementById('mediaLoader');
+    const output = document.getElementById('mediaOutput');
+    const copyBtn = document.getElementById('copyMedia');
+    
+    loader.style.display = 'block';
+    output.innerHTML = '';
+    copyBtn.style.display = 'none';
+    
+    try {
+        const response = await fetch('/api/youtube-summarize', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({url: url})
+        });
+        
+        const data = await response.json();
+        loader.style.display = 'none';
+        
+        if (data.error) {
+            output.innerHTML = `<p class="error-text"><i class="fas fa-exclamation-circle"></i> ${data.error}</p>`;
+        } else {
+            output.innerHTML = `<p>${data.summary}</p>`;
+            copyBtn.style.display = 'inline-block';
+        }
+    } catch (error) {
+        loader.style.display = 'none';
+        output.innerHTML = `<p class="error-text"><i class="fas fa-exclamation-circle"></i> Error: ${error.message}</p>`;
+    }
+});
+
+document.getElementById('fileBtn').addEventListener('click', async function() {
+    if (!mediaFileContent) {
+        showNotification('Please upload a file first', 'error');
+        return;
+    }
+    
+    const loader = document.getElementById('mediaLoader');
+    const output = document.getElementById('mediaOutput');
+    const copyBtn = document.getElementById('copyMedia');
+    
+    loader.style.display = 'block';
+    output.innerHTML = '';
+    copyBtn.style.display = 'none';
+    
+    try {
+        const response = await fetch('/api/summarize', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text: mediaFileContent})
+        });
+        
+        const data = await response.json();
+        loader.style.display = 'none';
+        
+        if (data.error) {
+            output.innerHTML = `<p class="error-text"><i class="fas fa-exclamation-circle"></i> ${data.error}</p>`;
+        } else {
+            output.innerHTML = `<p>${data.summary}</p>`;
+            copyBtn.style.display = 'inline-block';
+        }
+    } catch (error) {
+        loader.style.display = 'none';
+        output.innerHTML = `<p class="error-text"><i class="fas fa-exclamation-circle"></i> Error: ${error.message}</p>`;
+    }
+});
+
+document.getElementById('copyMedia').addEventListener('click', function() {
+    const text = document.getElementById('mediaOutput').innerText;
+    navigator.clipboard.writeText(text);
+    showNotification('Summary copied to clipboard!', 'success');
+});
+</script>
+{% endblock %}

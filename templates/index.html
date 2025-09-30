@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-content">
+        <h1 class="hero-title">Welcome to InfoByte</h1>
+        <p class="hero-subtitle">Your AI-Powered News & Media Analysis Toolkit</p>
+        <p class="hero-description">Leverage state-of-the-art NLP models to summarize, analyze, and translate content with ease.</p>
+    </div>
+</div>
+
+<div class="features-grid">
+    <div class="feature-card" onclick="location.href='{{ url_for('news_summarizer_page') }}'">
+        <div class="feature-icon">
+            <i class="fas fa-file-alt"></i>
+        </div>
+        <h3>News Summarizer</h3>
+        <p>Transform lengthy articles into concise summaries using advanced NLP models. Perfect for quick insights.</p>
+        <button class="btn-primary">
+            Get Started <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+
+    <div class="feature-card" onclick="location.href='{{ url_for('news_analyzer_page') }}'">
+        <div class="feature-icon">
+            <i class="fas fa-chart-bar"></i>
+        </div>
+        <h3>News Analyzer</h3>
+        <p>Upload Excel files and perform statistical analysis with beautiful visualizations and insights.</p>
+        <button class="btn-primary">
+            Analyze Data <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+
+    <div class="feature-card" onclick="location.href='{{ url_for('media_summarizer_page') }}'">
+        <div class="feature-icon">
+            <i class="fas fa-video"></i>
+        </div>
+        <h3>Media Summarizer</h3>
+        <p>Summarize YouTube videos using transcripts. Save time by getting key points instantly.</p>
+        <button class="btn-primary">
+            Summarize Video <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+
+    <div class="feature-card" onclick="location.href='{{ url_for('translator_page') }}'">
+        <div class="feature-icon">
+            <i class="fas fa-language"></i>
+        </div>
+        <h3>Multi-Language Translator</h3>
+        <p>Translate content into 200+ languages using the powerful NLLB model from Meta AI.</p>
+        <button class="btn-primary">
+            Translate Now <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+</div>
+
+<div class="info-section">
+    <div class="info-card">
+        <h2><i class="fas fa-robot"></i> Powered by AI</h2>
+        <p>All features utilize cutting-edge Hugging Face Transformers including DistilBART for summarization and NLLB for translation.</p>
+    </div>
+    <div class="info-card">
+        <h2><i class="fas fa-shield-alt"></i> Secure & Private</h2>
+        <p>Your data is processed locally and never stored permanently. We respect your privacy.</p>
+    </div>
+    <div class="info-card">
+        <h2><i class="fas fa-bolt"></i> Fast & Efficient</h2>
+        <p>Optimized pipelines ensure quick processing times even for large documents and videos.</p>
+    </div>
+</div>
+{% endblock %}

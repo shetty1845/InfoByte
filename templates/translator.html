@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Multi-Language Translator - InfoByte{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-language"></i> Multi-Language Translator</h1>
+    <p>Translate English text into multiple languages with text-to-speech playback</p>
+</div>
+
+<div class="content-wrapper">
+    <div class="input-section">
+        <div class="card">
+            <h3><i class="fas fa-keyboard"></i> Input Text (English)</h3>
+            <textarea id="translatorInput" placeholder="Enter English text to translate..." rows="12"></textarea>
+            
+            <label for="languageSelect"><i class="fas fa-globe"></i> Target Language:</label>
+            <select id="languageSelect" class="form-select">
+                {% for lang in languages %}
+                <option value="{{ lang }}">{{ lang }}</option>
+                {% endfor %}
+            </select>
+            
+            <button id="translateBtn" class="btn-primary btn-large">
+                <i class="fas fa-exchange-alt"></i> Translate Text
+            </button>
+        </div>
+    </div>
+
+    <div class="output-section">
+        <div class="card">
+            <h3><i class="fas fa-check-circle"></i> Translation Result</h3>
+            <div id="translatorLoader" class="loader" style="display: none;">
+                <div class="spinner"></div>
+                <p>Translating text...</p>
+            </div>
+            <div id="translatorOutput" class="output-box">
+                <p class="placeholder-text">Your translation will appear here...</p>
+            </div>
+            <div class="button-group">
+                <button id="copyTranslation" class="btn-secondary" style="display: none;">
+                    <i class="fas fa-copy"></i> Copy Translation
+                </button>
+                <button id="speakTranslation" class="btn-secondary" style="display: none;">
+                    <i class="fas fa-volume-up"></i> Listen
+                </button>
+            </div>
+            <audio id="audioPlayer" style="display: none;"></audio>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const translateBtn = document.getElementById('translateBtn');
+const copyBtn = document.getElementById('copyTranslation');
+const speakBtn = document.getElementById('speakTranslation');
+const loader = document.getElementById('translatorLoader');
+const output = document.getElementById('translatorOutput');
+const audioPlayer = document.getElementById('audioPlayer');
+
+function showNotification(message, type) {
+    // Placeholder for notification function
+    // Replace with actual notification UI if available
+    alert(`${type.toUpperCase()}: ${message}`);
+}
+
+translateBtn.addEventListener('click', async function() {
+    const text = document.getElementById('translatorInput').value.trim();
+    const language = document.getElementById('languageSelect').value;
+
+    if (!text) {
+        showNotification('Please enter text to translate', 'error');
+        return;
+    }
+
+    loader.style.display = 'block';
+    output.innerHTML = '';
+    copyBtn.style.display = 'none';
+    speakBtn.style.display = 'none';
+    audioPlayer.style.display = 'none';
+    audioPlayer.pause();
+    audioPlayer.src = '';
+
+    try {
+        const response = await fetch('/api/translate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text: text, language: language})
+        });
+
+        const data = await response.json();
+        loader.style.display = 'none';
+
+        if (data.error) {
+            output.innerHTML = `<p class="error-text"><i class="fas fa-exclamation-circle"></i> ${data.error}</p>`;
+        } else {
+            output.innerHTML = `<p>${data.translation}</p>`;
+            copyBtn.style.display = 'inline-block';
+            speakBtn.style.display = 'inline-block';
+        }
+    } catch (error) {
+        loader.style.display = 'none';
+        output.innerHTML = `<p class="error-text"><i class="fas fa-exclamation-circle"></i> Error: ${error.message}</p>`;
+    }
+});
+
+copyBtn.addEventListener('click', function() {
+    const text = output.innerText;
+    navigator.clipboard.writeText(text);
+    showNotification('Translation copied to clipboard!', 'success');
+});
+
+speakBtn.addEventListener('click', async function() {
+    const text = output.innerText;
+    const language = document.getElementById('languageSelect').value;
+
+    if (!text) {
+        showNotification('No text to speak', 'error');
+        return;
+    }
+
+    try {
+        speakBtn.disabled = true;
+        speakBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+
+        const response = await fetch('/api/text-to-speech', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                text: text,
+                language: language
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to generate speech');
+        }
+
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+
+        audioPlayer.src = audioUrl;
+        audioPlayer.style.display = 'block';
+        await audioPlayer.play();
+
+        audioPlayer.onended = function() {
+            URL.revokeObjectURL(audioUrl);
+        };
+    } catch (error) {
+        showNotification('Error generating speech: ' + error.message, 'error');
+    } finally {
+        speakBtn.disabled = false;
+        speakBtn.innerHTML = '<i class="fas fa-volume-up"></i> Listen';
+    }
+});
+</script>
+{% endblock %}

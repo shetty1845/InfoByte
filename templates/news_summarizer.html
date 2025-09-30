@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}News Summarizer - InfoByte{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-file-alt"></i> News Summarizer</h1>
+    <p>Transform lengthy articles into concise, informative summaries</p>
+</div>
+
+<div class="content-wrapper">
+    <div class="input-section">
+        <div class="card">
+            <h3><i class="fas fa-keyboard"></i> Input Text</h3>
+            <textarea id="summarizerInput" placeholder="Paste your news article or text here..." rows="12"></textarea>
+            
+            <div class="divider">
+                <span>OR</span>
+            </div>
+            
+            <div class="file-upload-area">
+                <input type="file" id="summarizerFile" accept=".txt" hidden>
+                <label for="summarizerFile" class="file-upload-label">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span>Upload Text File (.txt)</span>
+                </label>
+                <p id="fileName" class="file-name"></p>
+            </div>
+            
+            <button id="summarizeBtn" class="btn-primary btn-large">
+                <i class="fas fa-magic"></i> Generate Summary
+            </button>
+        </div>
+    </div>
+
+    <div class="output-section">
+        <div class="card">
+            <h3><i class="fas fa-check-circle"></i> Summary Result</h3>
+            <div id="summaryLoader" class="loader" style="display: none;">
+                <div class="spinner"></div>
+                <p>Generating summary...</p>
+            </div>
+            <div id="summaryOutput" class="output-box">
+                <p class="placeholder-text">Your summary will appear here...</p>
+            </div>
+            <button id="copySummary" class="btn-secondary" style="display: none;">
+                <i class="fas fa-copy"></i> Copy Summary
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('summarizerFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        document.getElementById('fileName').textContent = `Selected: ${file.name}`;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('summarizerInput').value = e.target.result;
+        };
+        reader.readAsText(file);
+    }
+});
+
+document.getElementById('summarizeBtn').addEventListener('click', async function() {
+    const text = document.getElementById('summarizerInput').value.trim();
+    
+    if (!text) {
+        showNotification('Please enter or upload text to summarize', 'error');
+        return;
+    }
+    
+    const loader = document.getElementById('summaryLoader');
+    const output = document.getElementById('summaryOutput');
+    const copyBtn = document.getElementById('copySummary');
+    
+    loader.style.display = 'block';
+    output.innerHTML = '';
+    copyBtn.style.display = 'none';
+    
+    try {
+        const response = await fetch('/api/summarize', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text: text})
+        });
+        
+        const data = await response.json();
+        loader.style.display = 'none';
+        
+        if (data.error) {
+            output.innerHTML = `<p class="error-text"><i class="fas fa-exclamation-circle"></i> ${data.error}</p>`;
+        } else {
+            output.innerHTML = `<p>${data.summary}</p>`;
+            copyBtn.style.display = 'inline-block';
+        }
+    } catch (error) {
+        loader.style.display = 'none';
+        output.innerHTML = `<p class="error-text"><i class="fas fa-exclamation-circle"></i> Error: ${error.message}</p>`;
+    }
+});
+
+document.getElementById('copySummary').addEventListener('click', function() {
+    const text = document.getElementById('summaryOutput').innerText;
+    navigator.clipboard.writeText(text);
+    showNotification('Summary copied to clipboard!', 'success');
+});
+</script>
+{% endblock %}

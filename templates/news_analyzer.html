@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}News Analyzer - InfoByte{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-chart-bar"></i> News Analyzer</h1>
+    <p>Upload Excel files and perform statistical analysis with visualizations</p>
+</div>
+
+<div class="content-wrapper-single">
+    <div class="card">
+        <h3><i class="fas fa-file-excel"></i> Upload Data File</h3>
+        
+        <div class="file-upload-area">
+            <input type="file" id="analyzerFile" accept=".xlsx" hidden>
+            <label for="analyzerFile" class="file-upload-label">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <span>Upload Excel File (.xlsx)</span>
+            </label>
+            <p id="analyzerFileName" class="file-name"></p>
+        </div>
+        
+        <div id="columnSelector" style="display: none;">
+            <label for="columnSelect">Select Numeric Column to Analyze:</label>
+            <select id="columnSelect" class="form-select"></select>
+            <button id="analyzeBtn" class="btn-primary btn-large">
+                <i class="fas fa-chart-line"></i> Analyze Data
+            </button>
+        </div>
+    </div>
+
+    <div id="resultsSection" style="display: none;">
+        <div class="card">
+            <h3><i class="fas fa-calculator"></i> Statistical Summary</h3>
+            <div id="statsOutput" class="stats-grid"></div>
+        </div>
+
+        <div class="visualizations-grid">
+            <div class="card">
+                <h3><i class="fas fa-chart-bar"></i> Histogram</h3>
+                <img id="histogramImg" class="chart-img" alt="Histogram">
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-chart-area"></i> Boxplot</h3>
+                <img id="boxplotImg" class="chart-img" alt="Boxplot">
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-chart-pie"></i> Distribution</h3>
+                <img id="piechartImg" class="chart-img" alt="Pie Chart">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let uploadedFile = null;
+
+document.getElementById('analyzerFile').addEventListener('change', async function(e) {
+    uploadedFile = e.target.files[0];
+    if (uploadedFile) {
+        document.getElementById('analyzerFileName').textContent = `Selected: ${uploadedFile.name}`;
+        
+        const formData = new FormData();
+        formData.append('file', uploadedFile);
+        
+        try {
+            const response = await fetch('/api/analyze', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.columns) {
+                const select = document.getElementById('columnSelect');
+                select.innerHTML = data.columns.map(col => `<option value="${col}">${col}</option>`).join('');
+                document.getElementById('columnSelector').style.display = 'block';
+            }
+        } catch (error) {
+            showNotification('Error loading file: ' + error.message, 'error');
+        }
+    }
+});
+
+document.getElementById('analyzeBtn').addEventListener('click', async function() {
+    const column = document.getElementById('columnSelect').value;
+    
+    if (!uploadedFile || !column) {
+        showNotification('Please select a file and column', 'error');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', uploadedFile);
+    formData.append('column', column);
+    
+    showNotification('Analyzing data...', 'info');
+    
+    try {
+        const response = await fetch('/api/analyze', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            showNotification(data.error, 'error');
+            return;
+        }
+        
+        // Display statistics
+        const statsHtml = `
+            <div class="stat-item">
+                <span class="stat-label">Count:</span>
+                <span class="stat-value">${data.stats.count}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Mean:</span>
+                <span class="stat-value">${data.stats.mean.toFixed(2)}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Median:</span>
+                <span class="stat-value">${data.stats.median.toFixed(2)}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Std Dev:</span>
+                <span class="stat-value">${data.stats.std.toFixed(2)}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Min:</span>
+                <span class="stat-value">${data.stats.min.toFixed(2)}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Max:</span>
+                <span class="stat-value">${data.stats.max.toFixed(2)}</span>
+            </div>
+        `;
+        document.getElementById('statsOutput').innerHTML = statsHtml;
+        
+        // Display plots
+        document.getElementById('histogramImg').src = 'data:image/png;base64,' + data.plots.histogram;
+        document.getElementById('boxplotImg').src = 'data:image/png;base64,' + data.plots.boxplot;
+        document.getElementById('piechartImg').src = 'data:image/png;base64,' + data.plots.piechart;
+        
+        document.getElementById('resultsSection').style.display = 'block';
+        showNotification('Analysis complete!', 'success');
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+    }
+});
+</script>
+{% endblock %}
